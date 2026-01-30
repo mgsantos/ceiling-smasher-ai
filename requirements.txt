@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sse-starlette
+python-dotenv
+rich
+ib_insync
+google-genai
+openai
+pandas
+yfinance
+google-search-results
+requests
