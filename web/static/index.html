@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission Control | Ceiling Smasher AI</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- AnsiUp -->
+    <script src="https://cdn.jsdelivr.net/npm/ansi_up@5.1.0/ansi_up.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f111a;
+            --panel-glass: rgba(20, 22, 30, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --card-bg: #151720;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            font-family: 'Inter', sans-serif;
+            color: #e2e8f0;
+            background-image:
+                radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+        }
+
+        .glass-panel {
+            background: var(--panel-glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .terminal-window {
+            font-family: 'JetBrains Mono', monospace;
+            background: #000;
+            color: #a0aec0;
+        }
+
+        /* Markdown Styles */
+        .markdown-body h1 {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #60a5fa;
+            margin-bottom: 0.5em;
+        }
+
+        .markdown-body h2 {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-top: 1em;
+            border-bottom: 1px solid #333;
+            padding-bottom: 0.2em;
+        }
+
+        .markdown-body h3 {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #c084fc;
+            margin-top: 1em;
+        }
+
+        .markdown-body p {
+            margin-bottom: 0.8em;
+            line-height: 1.6;
+        }
+
+        .markdown-body ul {
+            list-style-type: disc;
+            padding-left: 1.2em;
+            margin-bottom: 0.8em;
+        }
+
+        .markdown-body strong {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid #3b82f6;
+            padding-left: 1em;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1em;
+            font-size: 0.9em;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+            border: 1px solid #333;
+            padding: 6px;
+            text-align: left;
+        }
+
+        .markdown-body th {
+            background-color: #1e293b;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-fresh {
+            background-color: #4ade80;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+        }
+
+        .status-stale {
+            background-color: #facc15;
+        }
+
+        .status-dead {
+            background-color: #ef4444;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Bar -->
+    <header class="h-14 border-b border-[#2d3748] flex items-center justify-between px-6 bg-[#0b0d14]">
+        <div class="flex items-center gap-3">
+            <span class="text-lg font-bold tracking-tight text-white">MISSION<span
+                    class="text-blue-500">CONTROL</span></span>
+            <span
+                class="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-900/30 text-blue-400 border border-blue-900">V2.0
+                ALPHA</span>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-mono text-gray-500">
+            <div class="flex items-center gap-2">
+                <span id="sys-clock">00:00:00 UTC</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- Sidebar: Assets & Controls -->
+        <aside class="w-72 bg-[#11131b] border-r border-[#2d3748] flex flex-col">
+
+            <!-- Intelligence Cards -->
+            <div class="p-4 space-y-4 border-b border-[#2d3748]">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Intelligence Feeds</h3>
+
+                <!-- Alpha Toolkit Card -->
+                <div class="card p-3">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-indigo-400 font-semibold text-xs">ALPHA TOOLKIT</span>
+                        <div id="alpha-status-dot" class="status-dot status-dead"></div>
+                    </div>
+                    <div class="text-[10px] text-gray-400 mb-3" id="alpha-status-text">No Data</div>
+                    <button onclick="fetchAlphaToolkit()" id="alpha-btn"
+                        class="w-full py-1.5 rounded bg-indigo-900/30 hover:bg-indigo-900/50 border border-indigo-800 text-indigo-300 text-xs transition-colors flex justify-center items-center gap-2">
+                        <span>🕵️ Hunt Whales</span>
+                    </button>
+                </div>
+
+                <!-- Portfolio Card -->
+                <div class="card p-3">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-cyan-400 font-semibold text-xs">LIVE PORTFOLIO</span>
+                        <div id="port-status-dot" class="status-dot status-dead"></div>
+                    </div>
+                    <div class="text-[10px] text-gray-400 mb-3" id="port-status-text">Not Connected</div>
+                    <button onclick="fetchPortfolio()" id="port-btn"
+                        class="w-full py-1.5 rounded bg-cyan-900/30 hover:bg-cyan-900/50 border border-cyan-800 text-cyan-300 text-xs transition-colors flex justify-center items-center gap-2">
+                        <span>💼 Fetch IBKR</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Strategy Engine -->
+            <div class="p-4 border-b border-[#2d3748]">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Strategy Engine</h3>
+                <button onclick="startAnalysis()" id="run-btn"
+                    class="w-full py-3 rounded bg-gradient-to-r from-blue-700 to-indigo-600 hover:from-blue-600 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-900/20 transform active:scale-95 transition-all">
+                    INVOKE COUNCIL
+                </button>
+                <div class="mt-2 flex items-center gap-2 justify-center">
+                    <span id="status-badge"
+                        class="px-2 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400">IDLE</span>
+                </div>
+            </div>
+
+            <!-- Report History -->
+            <div class="flex-1 flex flex-col min-h-0 bg-[#0f111a]">
+                <div class="p-3 border-b border-[#2d3748] flex justify-between items-center bg-[#151720]">
+                    <span class="text-xs font-semibold text-gray-400">ARCHIVES</span>
+                    <button onclick="fetchReports()" class="text-gray-500 hover:text-white"><svg class="w-3 h-3"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                            </path>
+                        </svg></button>
+                </div>
+                <div id="report-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                    <!-- Reports injected here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="flex-1 flex flex-col min-w-0 bg-[#0b0d14]">
+
+            <!-- Context Bar -->
+            <div class="h-10 border-b border-[#2d3748] bg-[#11131b] flex items-center px-4 justify-between">
+                <div class="flex gap-4">
+                    <button onclick="switchView('report')" id="tab-report"
+                        class="text-xs font-bold text-blue-400 border-b-2 border-blue-500 px-2 h-10 flex items-center">REPORT
+                        VIEW</button>
+                    <button onclick="switchView('terminal')" id="tab-terminal"
+                        class="text-xs font-bold text-gray-500 hover:text-gray-300 px-2 h-10 flex items-center border-b-2 border-transparent">TERMINAL</button>
+                </div>
+                <div class="text-xs text-gray-500 font-mono" id="current-file-label">NO FILE SELECTED</div>
+            </div>
+
+            <!-- Report View -->
+            <div id="view-report" class="flex-1 overflow-hidden flex flex-col relative">
+                <div class="absolute top-4 right-8 flex gap-2 z-10">
+                    <button onclick="runPMAgent('gemini')" id="pm-gemini"
+                        class="hidden shadow-lg bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded font-mono flex items-center gap-1 transition-all">
+                        <span>🦁</span> RUN PM (GEMINI)
+                    </button>
+                    <button onclick="runPMAgent('grok')" id="pm-grok"
+                        class="hidden shadow-lg bg-black hover:bg-gray-900 border border-gray-700 text-white text-xs px-3 py-1.5 rounded font-mono flex items-center gap-1 transition-all">
+                        <span>🚀</span> RUN PM (GROK)
+                    </button>
+                </div>
+                <div id="markdown-container" class="flex-1 overflow-y-auto p-8 markdown-body max-w-5xl mx-auto w-full">
+                    <div class="flex flex-col items-center justify-center h-full text-gray-600">
+                        <div class="mb-4 p-4 rounded-full bg-[#151720] border border-[#2d3748]">
+                            <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                                </path>
+                            </svg>
+                        </div>
+                        <p class="text-sm">Select a report from the archives to view analysis.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terminal View -->
+            <div id="view-terminal" class="hidden flex-1 overflow-hidden bg-black flex flex-col p-4">
+                <div id="terminal" class="flex-1 overflow-y-auto terminal-window text-xs space-y-1">
+                    <div class="text-green-900">System Ready.</div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            activeView: 'report',
+            currentReport: null,
+            isBusy: false,
+            eventSource: null
+        };
+
+        const ansi_up = new AnsiUp();
+
+        // --- Clock ---
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('sys-clock').innerText = now.toISOString().split('.')[0].replace('T', ' ') + " UTC";
+        }, 1000);
+
+        // --- Status Monitors ---
+        async function updateSystemStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+
+                // Alpha Toolkit Status
+                const alphaDot = document.getElementById('alpha-status-dot');
+                const alphaText = document.getElementById('alpha-status-text');
+
+                if (data.alpha_age !== null) {
+                    if (data.alpha_age < 3600 * 24) { // < 24h
+                        alphaDot.className = "status-dot status-fresh";
+                        alphaText.innerText = "Fresh data (" + formatAge(data.alpha_age) + ")";
+                        alphaText.className = "text-[10px] text-green-400 mb-3";
+                    } else {
+                        alphaDot.className = "status-dot status-stale";
+                        alphaText.innerText = "Stale data (" + formatAge(data.alpha_age) + ")";
+                        alphaText.className = "text-[10px] text-yellow-500 mb-3";
+                    }
+                } else {
+                    alphaDot.className = "status-dot status-dead";
+                    alphaText.innerText = "No Data Found";
+                    alphaText.className = "text-[10px] text-gray-500 mb-3";
+                }
+
+                // Portfolio Status
+                const portDot = document.getElementById('port-status-dot');
+                const portText = document.getElementById('port-status-text');
+
+                if (data.portfolio_live) {
+                    portDot.className = "status-dot status-fresh";
+                    portText.innerText = "Connected (Gateway Active)";
+                    portText.className = "text-[10px] text-green-400 mb-3";
+                } else {
+                    portDot.className = "status-dot status-dead";
+                    portText.innerText = "Disconnected (Port Closed)";
+                    portText.className = "text-[10px] text-red-500 mb-3";
+                }
+
+            } catch (e) { console.error("Status fetch failed", e); }
+        }
+
+        function formatAge(seconds) {
+            if (seconds < 60) return `${Math.floor(seconds)}s ago`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            return `${Math.floor(seconds / 3600)}h ago`;
+        }
+
+        setInterval(updateSystemStatus, 30000); // Check every 30s
+        updateSystemStatus(); // Init check
+
+        // --- View Switching ---
+        function switchView(viewName) {
+            state.activeView = viewName;
+            const repView = document.getElementById('view-report');
+            const termView = document.getElementById('view-terminal');
+            const repTab = document.getElementById('tab-report');
+            const termTab = document.getElementById('tab-terminal');
+
+            repView.classList.add('hidden');
+            termView.classList.add('hidden');
+            repTab.className = "text-xs font-bold text-gray-500 hover:text-gray-300 px-2 h-10 flex items-center border-b-2 border-transparent";
+            termTab.className = "text-xs font-bold text-gray-500 hover:text-gray-300 px-2 h-10 flex items-center border-b-2 border-transparent";
+
+            if (viewName === 'report') {
+                repView.classList.remove('hidden');
+                repTab.className = "text-xs font-bold text-blue-400 border-b-2 border-blue-500 px-2 h-10 flex items-center";
+            } else {
+                termView.classList.remove('hidden');
+                termTab.className = "text-xs font-bold text-blue-400 border-b-2 border-blue-500 px-2 h-10 flex items-center";
+            }
+        }
+
+        // --- Terminal Logging ---
+        function log(msg, color) {
+            const term = document.getElementById('terminal');
+            const div = document.createElement('div');
+            div.innerHTML = ansi_up.ansi_to_html(msg);
+            if (color) div.style.color = color;
+            term.appendChild(div);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        // --- API & Event Handling ---
+        function resetStream() {
+            if (state.eventSource) {
+                state.eventSource.close();
+                state.eventSource = null;
+            }
+            state.isBusy = false;
+            document.getElementById('status-badge').innerText = "IDLE";
+            document.getElementById('status-badge').className = "px-2 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400";
+
+            // Revert buttons
+            document.getElementById('run-btn').classList.remove('from-red-600', 'to-orange-600');
+            document.getElementById('run-btn').classList.add('from-blue-700', 'to-indigo-600');
+            document.getElementById('run-btn').innerText = "INVOKE COUNCIL";
+        }
+
+        function startStream(url, label) {
+            if (state.isBusy) {
+                resetStream(); // Allow cancel
+                log(">>> Process cancelled by user.", "#ef4444");
+                return;
+            }
+
+            // UI Prep
+            state.isBusy = true;
+            switchView('terminal');
+            document.getElementById('terminal').innerHTML = ""; // Clear
+
+            const badge = document.getElementById('status-badge');
+            badge.innerText = "RUNNING";
+            badge.className = "px-2 py-0.5 rounded text-[10px] bg-green-900 text-green-400 animate-pulse border border-green-800";
+
+            const btn = document.getElementById('run-btn'); // Or the specific button pressed
+            // Global busy state simplifies things
+
+            log(`>>> Starting ${label}...`, "#60a5fa");
+
+            state.eventSource = new EventSource(url);
+
+            state.eventSource.addEventListener("log", e => log(e.data));
+            state.eventSource.addEventListener("start", e => log(e.data, "#4ade80"));
+            state.eventSource.addEventListener("error", e => { log(e.data, "#ef4444"); resetStream(); });
+            state.eventSource.addEventListener("complete", e => { log(e.data, "#4ade80"); resetStream(); updateSystemStatus(); });
+            state.eventSource.addEventListener("file_created", e => {
+                log(`>>> FILE READY: ${e.data}`, "#c084fc");
+                fetchReports();
+                loadReport(e.data);
+            });
+            state.eventSource.onerror = () => { resetStream(); };
+        }
+
+        // --- Actions ---
+        function fetchAlphaToolkit() {
+            startStream("/api/stream-alpha-toolkit", "Alpha Toolkit Intake");
+        }
+
+        function fetchPortfolio() {
+            startStream("/api/stream-portfolio", "Portfolio Fetch");
+        }
+
+        function startAnalysis() {
+            const btn = document.getElementById('run-btn');
+            if (state.isBusy) {
+                btn.innerText = "INVOKE COUNCIL";
+                resetStream();
+                return;
+            }
+            btn.innerText = "STOP EXECUTION";
+            btn.classList.add('from-red-600', 'to-orange-600');
+            btn.classList.remove('from-blue-700', 'to-indigo-600');
+
+            startStream("/api/stream-run", "Investment Council");
+        }
+
+        function runPMAgent(model) {
+            if (!state.currentReport) return;
+            startStream(`/api/stream-pm?report=${state.currentReport}&model=${model}`, `PM Agent (${model.toUpperCase()})`);
+        }
+
+        // --- Reports ---
+        async function fetchReports() {
+            try {
+                const res = await fetch('/api/reports');
+                const list = await res.json();
+                const el = document.getElementById('report-list');
+                el.innerHTML = "";
+
+                list.forEach(f => {
+                    const item = document.createElement('div');
+                    item.className = "p-2 rounded hover:bg-[#1e202a] cursor-pointer group transition-colors border-l-2 border-transparent hover:border-blue-500";
+
+                    const time = new Date(f.created * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const date = new Date(f.created * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+                    let icon = "📄";
+                    if (f.name.includes("alpha")) icon = "🕵️";
+
+                    item.innerHTML = `
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-medium text-gray-300 truncate w-32 group-hover:text-white">${icon} ${f.name}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] text-gray-600">
+                             <span>${date} ${time}</span>
+                             <span>${(f.size / 1024).toFixed(1)}kb</span>
+                        </div>
+                    `;
+                    item.onclick = () => loadReport(f.name);
+                    el.appendChild(item);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadReport(filename) {
+            state.currentReport = filename;
+            document.getElementById('current-file-label').innerText = filename;
+            document.getElementById('pm-gemini').style.display = 'flex';
+            document.getElementById('pm-grok').style.display = 'flex';
+
+            const container = document.getElementById('markdown-container');
+            container.innerHTML = '<div class="flex h-full items-center justify-center text-blue-500 font-mono text-xs">Accessing Archives...</div>';
+
+            switchView('report');
+
+            try {
+                const res = await fetch(`/api/reports/${filename}`);
+                if (!res.ok) throw new Error("Load failed");
+                const data = await res.json();
+                container.innerHTML = marked.parse(data.content);
+            } catch (e) {
+                container.innerHTML = `<div class="text-red-500 font-mono text-xs">Error: ${e.message}</div>`;
+            }
+        }
+
+        // --- Initialize ---
+        fetchReports();
+    </script>
+</body>
+
+</html>
