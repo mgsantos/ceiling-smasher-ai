@@ -389,6 +389,46 @@ def analyze_alpha_toolkit() -> str:
         return f"[red]Alpha Toolkit Analysis Failed: {e}[/red]"
 
 
+
+def parse_and_clean_inputs(red_team_text: str, *input_texts: str) -> list[str]:
+    """
+    Parses Red Team output for 'ABORT' verdicts and removes those tickers 
+    from all other input texts to prevent the CIO from seeing them.
+    """
+    # 1. Identify Banned Tickers
+    banned_tickers = set()
+    for line in red_team_text.split('\n'):
+        # Look for: "• Ticker: ABORT" or "Verdict: Ticker: ABORT" or just "ABORT" context
+        if "ABORT" in line:
+            # Simple extraction: look for uppercase words before the colon or in the line
+            # Heuristic: Find all words that look like tickers in the line
+            import re
+            candidates = re.findall(r"\b[A-Z]{2,6}\b", line)
+            for c in candidates:
+                if c not in ["ABORT", "VERDICT", "TICKER", "RISK", "HIGH"]:
+                    banned_tickers.add(c)
+    
+    if banned_tickers:
+        logger.warning(f"⛔ FIREWALL: Removing banned tickers from CIO context: {banned_tickers}")
+        print(f"[bold red]⛔ FIREWALL ACTIVE: Removing {banned_tickers}[/bold red]")
+
+    # 2. Scrubber Function
+    def scrub_text(text):
+        cleaned_lines = []
+        for line in text.split('\n'):
+            # If a banned ticker appears as a standalone word or in brackets [TICKER], drop the line
+            is_toxic = False
+            for ban in banned_tickers:
+                if f"[{ban}]" in line or f" {ban} " in line or line.startswith(f"{ban} ") or f"**{ban}**" in line:
+                    is_toxic = True
+                    break
+            if not is_toxic:
+                cleaned_lines.append(line)
+        return "\n".join(cleaned_lines)
+
+    # 3. Clean all inputs
+    return [scrub_text(t) for t in input_texts]
+
 def execute_portfolio_strategy(report_content: str, agent1_analysis: str, agent2_analysis: str, red_team_analysis: str, analysis_google: str, analysis_x: str = "", **kwargs) -> str:
     """
     Persona 3: The Portfolio Manager (The Boss) - CIO
@@ -397,29 +437,38 @@ def execute_portfolio_strategy(report_content: str, agent1_analysis: str, agent2
     client = _get_client()
     if not client: return "[red]Error: GEMINI_API_KEY not found.[/red]"
     
+    # --- NEW: RUN THE FIREWALL ---
+    # Clean ALL inputs based on Red Team Vetoes
+    cleaned_inputs = parse_and_clean_inputs(
+        red_team_analysis, 
+        report_content, agent1_analysis, agent2_analysis, analysis_google, analysis_x
+    )
+    
+    # Unpack cleaned data
+    c_report, c_agent1, c_agent2, c_google, c_x = cleaned_inputs
+    
     try:
         # PRE-FILTER CONTEXT for "Lost in the Middle" prevention
         # The report_content can be massive (thousands of lines). We only want the "HITs".
         clean_report_content = "### PRE-FILTERED DATA HIGHLIGHTS\n\n"
         
-        # Simple string processing to keep relevant lines
-        # We look for lines containing "HIT", "MATCH", "Score", or Table Headers with pipes
-        for line in report_content.splitlines():
+        # Use c_report (Firewalled) instead of raw report_content
+        for line in c_report.splitlines():
             if "HIT" in line or "MATCH" in line or "Score" in line or "|" in line or "#" in line:
                  clean_report_content += line + "\n"
         
         # Fallback if filter was too aggressive
         if len(clean_report_content) < 500:
-             clean_report_content = report_content[:20000] # Just take the first 20k chars
+             clean_report_content = c_report[:20000] 
 
         try:
             prompt = _load_prompt("agent3_cio.txt", 
                                   report_content=clean_report_content, 
-                                  agent1_analysis=agent1_analysis, 
-                                  agent2_analysis=agent2_analysis, 
-                                  red_team_analysis=red_team_analysis, 
-                                  analysis_google=analysis_google,
-                                  analysis_x=analysis_x,
+                                  agent1_analysis=c_agent1, 
+                                  agent2_analysis=c_agent2, 
+                                  red_team_analysis=red_team_analysis, # Keep Red Team raw so CIO knows WHY they were banned
+                                  analysis_google=c_google,
+                                  analysis_x=c_x,
                                   alpha_toolkit_data=kwargs.get('alpha_toolkit_data', 'No asymmetric data available.'))
         except Exception as e:
             return f"[red]Prompt Load Error: {e}[/red]"

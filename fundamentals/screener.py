@@ -411,7 +411,10 @@ def save_consolidated_report(results: Dict[str, List[Dict]]):
                 else:
                     items.sort(key=lambda x: x['EV/EBITDA'])
                 
-                df = pd.DataFrame(items)
+                # LIMIT TO TOP 20 PER STRATEGY based on User request to reduce noise
+                top_items = items[:20]
+                
+                df = pd.DataFrame(top_items)
                 
                 base_cols = ["Symbol", "Price", "Score", "RSI", "RVOL", "Dist52W", "EV/EBITDA", "Debt/Equity", "Gross Margin", "FCF Yield"]
                 if "Growth" in df.columns:
