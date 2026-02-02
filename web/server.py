@@ -30,7 +30,7 @@ async def run_analysis_generator():
     Generator that runs the analysis command and yields stdout lines as SSE events.
     Uses asyncio.subprocess for non-blocking I/O.
     """
-    cmd = "python -u main.py --scan --full --ai --save-report"
+    cmd = "python -u main.py --ai --save-report"
     
     # Run process asynchronously
     process = await asyncio.create_subprocess_shell(
@@ -39,7 +39,7 @@ async def run_analysis_generator():
         stderr=asyncio.subprocess.PIPE
     )
     
-    yield {"event": "start", "data": "🚀 Starting Analysis Process..."}
+    yield {"event": "start", "data": "🚀 Starting Intelligence Report Generation..."}
     
     try:
         # Stream stdout line by line asynchronously
@@ -110,7 +110,55 @@ async def run_portfolio_generator():
         if process.returncode is None:
              try: process.kill() 
              except: pass
+async def run_pm_execution_generator(model: str = "gemini"):
+    """
+    Generator that runs the PM Execution command.
+    """
+    cmd = f"python -u main.py --pm-execution --pm-model {model}"
+    
+    process = await asyncio.create_subprocess_shell(
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    
+    yield {"event": "start", "data": f"🦁 Running Portfolio Manager Execution ({model.upper()})..."}
 
+    try:
+        async for line in process.stdout:
+            decoded_line = line.decode('utf-8')
+            if decoded_line:
+                if "__API_LOG__" in decoded_line:
+                    try:
+                        clean_line = decoded_line.strip().replace("__API_LOG__", "")
+                        yield {"event": "api_log", "data": clean_line}
+                    except:
+                        yield {"event": "log", "data": decoded_line}
+                else:
+                    yield {"event": "log", "data": decoded_line}
+                
+        return_code = await process.wait()
+        
+        if return_code == 0:
+            yield {"event": "complete", "data": "✅ PM Execution Complete."}
+        else:
+            stderr_bytes = await process.stderr.read()
+            stderr = stderr_bytes.decode('utf-8')
+            yield {"event": "error", "data": f"Process failed with code {return_code}: {stderr}"}
+            
+    except Exception as e:
+        yield {"event": "error", "data": f"Server Error: {str(e)}"}
+        if process.returncode is None:
+             try: process.kill() 
+             except: pass
+
+@app.get("/api/stream-pm-execution")
+async def stream_pm_execution(model: str = "gemini"):
+    """
+    Endpoint for EventSource to connect and trigger PM Execution.
+    """
+    logger.info(f"UI Action: Run PM Execution triggered (Model: {model}).")
+    return EventSourceResponse(run_pm_execution_generator(model))
 @app.get("/api/stream-run")
 async def stream_run():
     """
@@ -180,6 +228,106 @@ async def stream_alpha_toolkit():
     """
     logger.info("UI Action: Fetch Alpha Toolkit triggered.")
     return EventSourceResponse(run_alpha_toolkit_generator())
+
+async def run_scan_generator(full: bool = False):
+    """
+    Generator that runs the Ceiling Smasher (Scan) command.
+    """
+    cmd = "python -u main.py --scan"
+    if full:
+        cmd += " --full"
+    
+    process = await asyncio.create_subprocess_shell(
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    
+    yield {"event": "start", "data": f"🔨 Running Ceiling Smasher Scan ({'FULL' if full else 'Default'})..."}
+
+    try:
+        async for line in process.stdout:
+            decoded_line = line.decode('utf-8')
+            if decoded_line:
+                if "__API_LOG__" in decoded_line:
+                    try:
+                        clean_line = decoded_line.strip().replace("__API_LOG__", "")
+                        yield {"event": "api_log", "data": clean_line}
+                    except:
+                        yield {"event": "log", "data": decoded_line}
+                else:
+                    yield {"event": "log", "data": decoded_line}
+                
+        return_code = await process.wait()
+        
+        if return_code == 0:
+            yield {"event": "complete", "data": "✅ Ceiling Smasher Scan Complete."}
+            files = glob.glob(f"{OUTPUT_DIR}/ceiling_smasher_report_*.md")
+            if files:
+                latest_file = max(files, key=os.path.getctime)
+                yield {"event": "file_created", "data": os.path.basename(latest_file)}
+        else:
+            stderr_bytes = await process.stderr.read()
+            stderr = stderr_bytes.decode('utf-8')
+            yield {"event": "error", "data": f"Process failed with code {return_code}: {stderr}"}
+            
+    except Exception as e:
+        yield {"event": "error", "data": f"Server Error: {str(e)}"}
+        if process.returncode is None:
+             try: process.kill() 
+             except: pass
+
+@app.get("/api/stream-scan")
+async def stream_scan(full: bool = False):
+    """
+    Endpoint for EventSource to trigger Ceiling Smasher.
+    """
+    logger.info(f"UI Action: Ceiling Smasher triggered (Full: {full}).")
+    return EventSourceResponse(run_scan_generator(full))
+
+async def run_fundamentals_generator(modes: str = "VALUE"):
+    """
+    Generator that runs the fundamentals command and yields stdout lines as SSE events.
+    """
+    # Quote the modes string to handle spaces if any, though standard is CSV
+    cmd = f"python -u main.py --fundamentals --mode \"{modes}\""
+    
+    process = await asyncio.create_subprocess_shell(
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    
+    yield {"event": "start", "data": f"💎 Running Fundamentals Scan: {modes}..."}
+
+    try:
+        async for line in process.stdout:
+            decoded_line = line.decode('utf-8')
+            if decoded_line:
+                yield {"event": "log", "data": decoded_line}
+                
+        return_code = await process.wait()
+        
+        if return_code == 0:
+            yield {"event": "complete", "data": f"✅ Scan Complete ({modes})."}
+        else:
+            stderr_bytes = await process.stderr.read()
+            stderr = stderr_bytes.decode('utf-8')
+            yield {"event": "error", "data": f"Process failed with code {return_code}: {stderr}"}
+            
+    except Exception as e:
+        yield {"event": "error", "data": f"Server Error: {str(e)}"}
+        if process.returncode is None:
+             try: process.kill()
+             except: pass
+
+@app.get("/api/stream-fundamentals")
+async def stream_fundamentals(modes: str = "VALUE"):
+    """
+    Endpoint for EventSource to connect and trigger fundamentals scan.
+    """
+    logger.info(f"UI Action: Fetch Fundamentals triggered (Mode: {modes}).")
+    return EventSourceResponse(run_fundamentals_generator(modes))
 
 async def run_pm_review_generator(filename: str, model: str = "gemini"):
     """
@@ -275,6 +423,7 @@ async def get_system_status():
     status = {
         "report_age": None,
         "alpha_age": None,
+        "scan_age": None,
         "portfolio_live": False
     }
     
@@ -290,6 +439,15 @@ async def get_system_status():
             latest = max(report_files, key=os.path.getctime)
             age = time.time() - os.path.getctime(latest)
             status["report_age"] = int(age)
+    except: pass
+    
+    # 3. Check Ceiling Smasher
+    try:
+        cs_files = glob.glob(os.path.join(OUTPUT_DIR, "ceiling_smasher_report_*.md"))
+        if cs_files:
+            latest = max(cs_files, key=os.path.getctime)
+            age = time.time() - os.path.getctime(latest)
+            status["scan_age"] = int(age)
     except: pass
     
     # 2. Check Alpha Toolkit

@@ -167,46 +167,47 @@ def _load_prompt(filename: str, **kwargs) -> str:
         # Let's clean the args to debug or just raise
         raise e
 
-def analyze_concentrated_alpha(table: Table) -> str:
+def analyze_concentrated_alpha(report_content: str) -> str:
     """
     Persona 1: Concentrated Alpha (Growth/Macro/Kelly)
+    Consumes the Fundamentals Report (Growth Section) and Alpha Toolkit Data.
     """
     client = _get_client()
     if not client: return "[red]Error: GEMINI_API_KEY not found.[/red]"
     
-    table_str = _capture_table(table)
-
     try:
-        prompt = _load_prompt("agent1_alpha.txt", table_str=table_str)
+        # Prompt now expects 'report_content' not 'table_str'
+        prompt = _load_prompt("agent1_alpha.txt", report_content=report_content)
     except Exception as e:
         return f"[red]Prompt Load Error: {e}[/red]"
     try:
         return _generate_with_log(
             client=client,
-            model='gemini-2.5-pro', 
-            contents=prompt
+            model='gemini-2.0-flash', 
+            contents=prompt,
+            config={'tools': [{'google_search': {}}]}
         )
     except Exception as e:
         return f"[red]AI Analysis Failed: {e}[/red]"
 
-def analyze_deep_value(table: Table) -> str:
+def analyze_deep_value(report_content: str) -> str:
     """
     Persona 2: Deep Value (Contrarian/Capital Cycle)
+    Consumes the Fundamentals Report (Value Section).
     """
     client = _get_client()
     if not client: return "[red]Error: GEMINI_API_KEY not found.[/red]"
     
-    table_str = _capture_table(table)
-
     try:
-        prompt = _load_prompt("agent2_value.txt", table_str=table_str)
+        prompt = _load_prompt("agent2_value.txt", report_content=report_content)
     except Exception as e:
         return f"[red]Prompt Load Error: {e}[/red]"
     try:
         return _generate_with_log(
             client=client,
-            model='gemini-2.5-pro', 
-            contents=prompt
+            model='gemini-2.0-flash', 
+            contents=prompt,
+            config={'tools': [{'google_search': {}}]}
         )
     except Exception as e:
         return f"[red]AI Analysis Failed: {e}[/red]"
@@ -259,26 +260,15 @@ def extract_tickers_from_analysis(text: str) -> list[str]:
 
 def analyze_red_team(tickers: list[str]) -> str:
     """
-    Persona 4: The Red Team (Live Research/Fact Checker) - DEEP RESEARCH MODE
-    Uses SerpAPI (Google) + Jina AI (Reader) to autonomously vet tickers.
+    Persona 4: The Red Team (Live Research/Fact Checker) - FAST MODE
+    Uses Gemini 2.0 Flash with Google Search to autonomously vet tickers.
     """
-    from serpapi import GoogleSearch
-    import requests
-    import json
-    from utils.logger import logger
-    
     client = _get_client()
     if not client: return "[red]Error: GEMINI_API_KEY not found.[/red]"
-    
-    serp_key = os.environ.get("SERPAPI_API_KEY")
-    jina_key = os.environ.get("JINA_API_KEY") # Optional
     
     if not tickers:
         return "No tickers provided to vet."
     
-    if not serp_key:
-        return "[red]Error: SERPAPI_API_KEY not found in .env. Red Team requires it for Deep Research.[/red]"
-
     final_report = "### 🚩 RED TEAM DEEP DIVE REPORT\n\n"
 
     for ticker in tickers:
@@ -288,80 +278,34 @@ def analyze_red_team(tickers: list[str]) -> str:
         logger.info(f"Red Team Vetting Started: {ticker}")
         
         final_report += f"#### Analysis: {ticker}\n"
-        
-        try:
-            # 1. Generate Queries (LLM)
-            query_prompt = f"You are a forensic accountant. Generate 3 short, aggressive Google search queries to find fraud, lawsuits, insider selling, or accounting irregularities for the stock ticker {ticker}. Format: JSON list of strings."
-            queries_json = _generate_with_log(client, 'gemini-2.0-flash', query_prompt)
-            # Clean json
-            queries_json = queries_json.replace("```json", "").replace("```", "").strip()
-            queries = json.loads(queries_json)
-        except:
-            queries = [f"{ticker} fraud lawsuit", f"{ticker} short seller report", f"{ticker} accounting problems"]
-            logger.warning(f"Failed to generate custom queries for {ticker}, using defaults.")
-            
-        evidence_text = ""
-        
-        # 2. Search Loop (SerpAPI)
-        for q in queries:
-            try:
-                search = GoogleSearch({
-                    "q": q, 
-                    "location": "United States",
-                    "api_key": serp_key
-                })
-                results = search.get_dict()
-                organic = results.get("organic_results", [])[:2] # Top 2 per query
-                
-                # 3. Scrape Loop (Jina AI)
-                for res in organic:
-                    link = res.get("link")
-                    title = res.get("title")
-                    if not link: continue
-                    
-                    # Jina Reader
-                    jina_url = f"https://r.jina.ai/{link}"
-                    headers = {}
-                    if jina_key: headers["Authorization"] = f"Bearer {jina_key}"
-                    
-                    try:
-                        # Retry loop for Jina
-                        content = None
-                        for attempt in range(2):
-                            try:
-                                # increased timeout to 30s
-                                scraped = requests.get(jina_url, headers=headers, timeout=30)
-                                if scraped.status_code == 200:
-                                    content = scraped.text[:4000] # Increased context limit slightly
-                                    break
-                            except requests.RequestException as e:
-                                if attempt == 1: 
-                                    logger.error(f"Jina scrape timed out/failed for {link}: {e}")
-                                    break # Don't raise, just log and skip
-                                import time
-                                time.sleep(1) # Brief pause before retry
-                        
-                        if content:
-                            evidence_text += f"\nSOURCE: {title} ({link})\nCONTENT: {content}\n---\n"
-                    except Exception as e:
-                        logger.error(f"Jina scrape critical error for {link}: {e}")
-                        
-            except Exception as e:
-                logger.error(f"Search failed for {q}: {e}")
 
-                
-        # 4. Final Analysis (LLM) with Evidence
-        if not evidence_text:
-            evidence_text = "No deep search results found."
-            
-        vetting_prompt = _load_prompt("agent4_redteam.txt", ticker_str=ticker)
-        # We append the fresh evidence to the prompt
-        vetting_prompt += f"\n\n[DEEP RESEARCH EVIDENCE COLLECTED]:\n{evidence_text}\n\nINSTRUCTIONS: Analyze the evidence above. If you find VERIFIED red flags (fraud, lawsuits, aggressive insider selling), VETO the stock. If it's just noise, approve it. Be harsh."
-        
         try:
-            analysis = _generate_with_log(client, 'gemini-2.0-flash', vetting_prompt)
+            # Load prompt asking for specific checks
+            prompt_template = _load_prompt("agent4_redteam.txt", ticker_str=ticker)
+            
+            # Augment prompt to force search tool usage
+            prompt = (
+                f"{prompt_template}\n\n"
+                f"COMMAND: You have access to Google Search. You MUST use it to search for the following regarding {ticker}:\n"
+                f"1. Recent lawsuits or fraud allegations.\n"
+                f"2. Aggressive insider selling in the last 6 months.\n"
+                f"3. Short seller reports or accounting irregularities.\n"
+                f"4. Major regulatory risks.\n\n"
+                f"Synthesize your findings. If you find VERIFIED red flags, VETO the stock. If it's pure noise or clean, APPROVE it. Be harsh and concise."
+            )
+
+            # Call Gemini 2.0 Flash with Search Tool
+            analysis = _generate_with_log(
+                client=client, 
+                model='gemini-2.0-flash', 
+                contents=prompt,
+                config={'tools': [{'google_search': {}}]}
+            )
+            
             final_report += f"{analysis}\n\n---\n"
+            
         except Exception as e:
+            logger.error(f"Red Team Vetting Failed for {ticker}: {e}")
             final_report += f"Error analyzing {ticker}: {e}\n\n"
             
     return final_report
@@ -445,32 +389,47 @@ def analyze_alpha_toolkit() -> str:
         return f"[red]Alpha Toolkit Analysis Failed: {e}[/red]"
 
 
-def execute_portfolio_strategy(table: Table, agent1_analysis: str, agent2_analysis: str, red_team_analysis: str, analysis_google: str, analysis_x: str = "", **kwargs) -> str:
+def execute_portfolio_strategy(report_content: str, agent1_analysis: str, agent2_analysis: str, red_team_analysis: str, analysis_google: str, analysis_x: str = "", **kwargs) -> str:
     """
-    Persona 3: The Portfolio Manager (The Boss)
+    Persona 3: The Portfolio Manager (The Boss) - CIO
     Synthesizes inputs from the Growth and Value analysts + Red Team Intel + Google & X Agents to create final execution orders.
     """
     client = _get_client()
     if not client: return "[red]Error: GEMINI_API_KEY not found.[/red]"
     
-    table_str = _capture_table(table)
+    try:
+        # PRE-FILTER CONTEXT for "Lost in the Middle" prevention
+        # The report_content can be massive (thousands of lines). We only want the "HITs".
+        clean_report_content = "### PRE-FILTERED DATA HIGHLIGHTS\n\n"
+        
+        # Simple string processing to keep relevant lines
+        # We look for lines containing "HIT", "MATCH", "Score", or Table Headers with pipes
+        for line in report_content.splitlines():
+            if "HIT" in line or "MATCH" in line or "Score" in line or "|" in line or "#" in line:
+                 clean_report_content += line + "\n"
+        
+        # Fallback if filter was too aggressive
+        if len(clean_report_content) < 500:
+             clean_report_content = report_content[:20000] # Just take the first 20k chars
 
-    try:
-        prompt = _load_prompt("agent3_cio.txt", 
-                              table_str=table_str, 
-                              agent1_analysis=agent1_analysis, 
-                              agent2_analysis=agent2_analysis, 
-                              red_team_analysis=red_team_analysis, 
-                              analysis_google=analysis_google,
-                              analysis_x=analysis_x,
-                              alpha_toolkit_data=kwargs.get('alpha_toolkit_data', 'No asymmetric data available.'))
-    except Exception as e:
-        return f"[red]Prompt Load Error: {e}[/red]"
-    try:
+        try:
+            prompt = _load_prompt("agent3_cio.txt", 
+                                  report_content=clean_report_content, 
+                                  agent1_analysis=agent1_analysis, 
+                                  agent2_analysis=agent2_analysis, 
+                                  red_team_analysis=red_team_analysis, 
+                                  analysis_google=analysis_google,
+                                  analysis_x=analysis_x,
+                                  alpha_toolkit_data=kwargs.get('alpha_toolkit_data', 'No asymmetric data available.'))
+        except Exception as e:
+            return f"[red]Prompt Load Error: {e}[/red]"
+        
         return _generate_with_log(
             client=client,
-            model='gemini-2.5-pro', 
-            contents=prompt
+            model='gemini-2.0-flash',  # Keeping Flash for speed, but Context is now cleaner. 
+            # If user has access, 'gemini-1.5-pro' would be better here.
+            contents=prompt,
+            config={'tools': [{'google_search': {}}]}
         )
     except Exception as e:
         return f"[red]AI Analysis Failed: {e}[/red]"
@@ -503,7 +462,7 @@ def execute_portfolio_manager(portfolio: list, cio_analysis: str, **kwargs) -> s
         # Enable Google Search for Fact Checking
         return _generate_with_log(
             client=client,
-            model='gemini-2.0-flash', 
+            model='gemini-2.5-pro', 
             contents=prompt,
             config={'tools': [{'google_search': {}}]}
         )

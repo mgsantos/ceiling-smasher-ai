@@ -67,9 +67,6 @@ The system operates in a multi-stage pipeline:
     GEMINI_API_KEY=your_gemini_key
     XAI_API_KEY=your_grok_key
 
-    # Research
-    SERPAPI_API_KEY=your_serpapi_key
-
     # Broker (Optional defaults)
     IB_HOST=127.0.0.1
     IB_PORT=4001

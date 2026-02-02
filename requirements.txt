@@ -8,5 +8,5 @@ google-genai
 openai
 pandas
 yfinance
-google-search-results
 requests
+tabulate

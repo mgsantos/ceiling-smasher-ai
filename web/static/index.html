@@ -182,43 +182,97 @@
         <!-- Sidebar: Assets & Controls -->
         <aside class="w-72 bg-[#11131b] border-r border-[#2d3748] flex flex-col">
 
-            <!-- Intelligence Cards -->
-            <div class="p-4 space-y-4 border-b border-[#2d3748]">
-                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Intelligence Feeds</h3>
+            <!-- DATA GENERATORS (Async Modules) -->
+            <div class="p-4 space-y-4 border-b border-[#2d3748] bg-[#0b0d14]/50">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
+                        </path>
+                    </svg>
+                    DATA MODULES
+                </h3>
 
-                <!-- Alpha Toolkit Card -->
-                <div class="card p-3">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-indigo-400 font-semibold text-xs">ALPHA TOOLKIT</span>
-                        <div id="alpha-status-dot" class="status-dot status-dead"></div>
+                <!-- 1. Ceiling Smasher Card -->
+                <div class="card p-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-blue-400 font-bold text-[10px]">CEILING SMASHER</span>
+                        <div id="scan-status-dot" class="status-dot status-dead"></div>
                     </div>
-                    <div class="text-[10px] text-gray-400 mb-3" id="alpha-status-text">No Data</div>
-                    <button onclick="fetchAlphaToolkit()" id="alpha-btn"
-                        class="w-full py-1.5 rounded bg-indigo-900/30 hover:bg-indigo-900/50 border border-indigo-800 text-indigo-300 text-xs transition-colors flex justify-center items-center gap-2">
-                        <span>🕵️ Hunt Whales</span>
+                    <div class="text-[9px] text-gray-500 mb-2 truncate" id="scan-status-text">No Report Found</div>
+                    <button onclick="fetchCeilingSmasher()" id="scan-btn"
+                        class="w-full py-1.5 rounded bg-blue-900/20 hover:bg-blue-900/40 border border-blue-800/50 text-blue-300 text-[10px] transition-all flex justify-center items-center gap-1">
+                        <span>🔨 Run Technicals</span>
                     </button>
                 </div>
 
-                <!-- Portfolio Card -->
-                <div class="card p-3">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-cyan-400 font-semibold text-xs">LIVE PORTFOLIO</span>
+                <!-- 2. Fundamentals Card -->
+                <div class="card p-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-yellow-400 font-bold text-[10px]">FUNDAMENTALS</span>
+                        <div class="status-dot status-fresh"></div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="text-[9px] text-gray-400 font-mono flex gap-1">
+                            Strategies:
+                            <span
+                                class="text-yellow-400 bg-yellow-900/20 px-1 rounded border border-yellow-900/50">Value</span>
+                            <span
+                                class="text-green-400 bg-green-900/20 px-1 rounded border border-green-900/50">Growth</span>
+                            <span
+                                class="text-purple-400 bg-purple-900/20 px-1 rounded border border-purple-900/50">Micro</span>
+                        </div>
+                    </div>
+                    <button onclick="fetchFundamentals()"
+                        class="w-full py-1.5 rounded bg-orange-900/20 hover:bg-orange-900/40 border border-orange-800/50 text-orange-300 text-[10px] transition-all">
+                        💎 Run Screener
+                    </button>
+                </div>
+
+                <!-- 3. Alpha Toolkit Card -->
+                <div class="card p-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-indigo-400 font-bold text-[10px]">ALPHA TOOLKIT</span>
+                        <div id="alpha-status-dot" class="status-dot status-dead"></div>
+                    </div>
+                    <div class="text-[9px] text-gray-500 mb-2 truncate" id="alpha-status-text">No Data</div>
+                    <button onclick="fetchAlphaToolkit()" id="alpha-btn"
+                        class="w-full py-1.5 rounded bg-indigo-900/20 hover:bg-indigo-900/40 border border-indigo-800/50 text-indigo-300 text-[10px] transition-all flex justify-center items-center gap-1">
+                        <span>🕵️ Hunt Asymmetric</span>
+                    </button>
+                </div>
+
+                <!-- 4. Portfolio Card -->
+                <div class="card p-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-cyan-400 font-bold text-[10px]">IBKR LIVE</span>
                         <div id="port-status-dot" class="status-dot status-dead"></div>
                     </div>
-                    <div class="text-[10px] text-gray-400 mb-3" id="port-status-text">Not Connected</div>
+                    <div class="text-[9px] text-gray-500 mb-2 truncate" id="port-status-text">Disconnected</div>
                     <button onclick="fetchPortfolio()" id="port-btn"
-                        class="w-full py-1.5 rounded bg-cyan-900/30 hover:bg-cyan-900/50 border border-cyan-800 text-cyan-300 text-xs transition-colors flex justify-center items-center gap-2">
-                        <span>💼 Fetch IBKR</span>
+                        class="w-full py-1.5 rounded bg-cyan-900/20 hover:bg-cyan-900/40 border border-cyan-800/50 text-cyan-300 text-[10px] transition-all flex justify-center items-center gap-1">
+                        <span>💼 Fetch Positions</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Strategy Engine -->
+
+
+            <!-- Intelligence Engine -->
             <div class="p-4 border-b border-[#2d3748]">
-                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Strategy Engine</h3>
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Intelligence Engine</h3>
                 <button onclick="startAnalysis()" id="run-btn"
                     class="w-full py-3 rounded bg-gradient-to-r from-blue-700 to-indigo-600 hover:from-blue-600 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-900/20 transform active:scale-95 transition-all">
-                    INVOKE COUNCIL
+                    GENERATE REPORT
+                </button>
+            </div>
+
+            <!-- Execution Engine -->
+            <div class="p-4 border-b border-[#2d3748]">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Execution Engine</h3>
+                <button onclick="runPMExecution()" id="exec-btn"
+                    class="w-full py-3 rounded bg-gradient-to-r from-emerald-700 to-teal-600 hover:from-emerald-600 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-900/20 transform active:scale-95 transition-all">
+                    RUN PORTFOLIO MGR
                 </button>
                 <div class="mt-2 flex items-center gap-2 justify-center">
                     <span id="status-badge"
@@ -335,7 +389,25 @@
                 } else {
                     alphaDot.className = "status-dot status-dead";
                     alphaText.innerText = "No Data Found";
-                    alphaText.className = "text-[10px] text-gray-500 mb-3";
+                }
+
+                // Ceiling Smasher Status
+                const scanDot = document.getElementById('scan-status-dot');
+                const scanText = document.getElementById('scan-status-text');
+
+                if (data.scan_age !== null) {
+                    if (data.scan_age < 3600 * 24) {
+                        scanDot.className = "status-dot status-fresh";
+                        scanText.innerText = "Fresh (" + formatAge(data.scan_age) + ")";
+                        scanText.className = "text-[9px] text-green-400 mb-2 truncate";
+                    } else {
+                        scanDot.className = "status-dot status-stale";
+                        scanText.innerText = "Stale (" + formatAge(data.scan_age) + ")";
+                        scanText.className = "text-[9px] text-yellow-500 mb-2 truncate";
+                    }
+                } else {
+                    scanDot.className = "status-dot status-dead";
+                    scanText.innerText = "No Data Found";
                 }
 
                 // Portfolio Status
@@ -409,7 +481,11 @@
             // Revert buttons
             document.getElementById('run-btn').classList.remove('from-red-600', 'to-orange-600');
             document.getElementById('run-btn').classList.add('from-blue-700', 'to-indigo-600');
-            document.getElementById('run-btn').innerText = "INVOKE COUNCIL";
+            document.getElementById('run-btn').innerText = "GENERATE REPORT";
+
+            document.getElementById('exec-btn').classList.remove('from-red-600', 'to-orange-600');
+            document.getElementById('exec-btn').classList.add('from-emerald-700', 'to-teal-600');
+            document.getElementById('exec-btn').innerText = "RUN PORTFOLIO MGR";
         }
 
         function startStream(url, label) {
@@ -447,6 +523,19 @@
             state.eventSource.onerror = () => { resetStream(); };
         }
 
+        function fetchFundamentals() {
+            // Run ALL strategies by default as requested
+            const modes = ["VALUE", "GROWTH", "MICROCAP"];
+
+            const modeStr = modes.join(",");
+            startStream(`/api/stream-fundamentals?modes=${modeStr}`, `Fundamentals Scan (${modeStr})`);
+        }
+
+        function fetchCeilingSmasher() {
+            startStream("/api/stream-scan?full=true", "Ceiling Smasher (Full Market Scan)");
+        }
+
+
         // --- Actions ---
         function fetchAlphaToolkit() {
             startStream("/api/stream-alpha-toolkit", "Alpha Toolkit Intake");
@@ -456,18 +545,34 @@
             startStream("/api/stream-portfolio", "Portfolio Fetch");
         }
 
+
+
         function startAnalysis() {
             const btn = document.getElementById('run-btn');
             if (state.isBusy) {
-                btn.innerText = "INVOKE COUNCIL";
+                btn.innerText = "GENERATE REPORT";
+                resetStream();
+                return;
+            }
+            btn.innerText = "STOP GENERATION";
+            btn.classList.add('from-red-600', 'to-orange-600');
+            btn.classList.remove('from-blue-700', 'to-indigo-600');
+
+            startStream("/api/stream-run", "Intelligence Report Generation");
+        }
+
+        function runPMExecution() {
+            const btn = document.getElementById('exec-btn');
+            if (state.isBusy) {
+                btn.innerText = "RUN PORTFOLIO MGR";
                 resetStream();
                 return;
             }
             btn.innerText = "STOP EXECUTION";
             btn.classList.add('from-red-600', 'to-orange-600');
-            btn.classList.remove('from-blue-700', 'to-indigo-600');
+            btn.classList.remove('from-emerald-700', 'to-teal-600');
 
-            startStream("/api/stream-run", "Investment Council");
+            startStream("/api/stream-pm-execution", "PM Execution");
         }
 
         function runPMAgent(model) {
